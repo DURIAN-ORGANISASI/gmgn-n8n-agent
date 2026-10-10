@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" width="900" height="680" font-family="Arial, Helvetica, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Ilustrasi tampilan di Discord</title>
+  <desc id="d">Perintah !ai, balasan agent dalam kartu embed, dan bukti pengiriman GM dalam kartu embed. Nama dan ID fiktif.</desc>
+  <rect width="900" height="680" rx="14" fill="#313338"/>
+  <rect width="900" height="44" rx="14" fill="#2b2d31"/><rect y="30" width="900" height="14" fill="#2b2d31"/>
+  <text x="22" y="29" font-size="17" font-weight="700" fill="#f2f3f5"><tspan fill="#80848e">#</tspan> gm-gn-pemantau</text>
+
+  <!-- perintah -->
+  <circle cx="44" cy="84" r="20" fill="#5865f2"/><text x="44" y="90" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">K</text>
+  <text x="80" y="78" font-size="15" font-weight="700" fill="#f2f3f5">Kamu</text><text x="124" y="78" font-size="11" fill="#949ba4">Hari ini 14:20</text>
+  <text x="80" y="102" font-size="15" fill="#dbdee1" font-family="monospace">!ai lihat daftar channel</text>
+
+  <!-- balasan agent (embed biru) -->
+  <circle cx="44" cy="150" r="20" fill="#1d9e5a"/><text x="44" y="156" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">GN</text>
+  <text x="80" y="144" font-size="15" font-weight="700" fill="#f2f3f5">GM/GN Agent</text>
+  <rect x="188" y="131" width="30" height="16" rx="3" fill="#5865f2"/><text x="203" y="143" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">BOT</text>
+  <text x="226" y="144" font-size="11" fill="#949ba4">Hari ini 00:01</text>
+
+  <rect x="80" y="160" width="600" height="228" rx="6" fill="#2b2d31"/>
+  <rect x="80" y="160" width="5" height="228" rx="2" fill="#5865f2"/>
+  <text x="104" y="188" font-size="15" font-weight="700" fill="#f2f3f5">Hasil perintah</text>
+  <g font-size="14" fill="#dbdee1">
+    <text x="104" y="216">Berikut daftar channel yang terdaftar:</text>
+    <text x="104" y="242">•  Contoh Server › </text>
+    <rect x="228" y="228" width="72" height="20" rx="4" fill="#3c4270"/><text x="237" y="243" fill="#c9cdfb">#gm-gn</text>
+    <text x="308" y="242">• GM 07:00 • GN 19:00 • Aktif</text>
+    <text x="104" y="268">•  Komunitas Fiktif › </text>
+    <rect x="248" y="254" width="84" height="20" rx="4" fill="#3c4270"/><text x="257" y="269" fill="#c9cdfb">#morning</text>
+    <text x="340" y="268">• GM 07:00 • GN 19:00 • Aktif</text>
+    <text x="104" y="294">•  Server Uji › </text>
+    <rect x="196" y="280" width="124" height="20" rx="4" fill="#3c4270"/><text x="205" y="295" fill="#c9cdfb">#general-queries</text>
+    <text x="328" y="294">• GM 07:00 • GN 19:00 • Nonaktif</text>
+  </g>
+  <text x="104" y="326" font-size="13" font-weight="700" fill="#f2f3f5">Perintah</text>
+  <rect x="104" y="334" width="220" height="24" rx="4" fill="#1e1f22"/><text x="114" y="351" font-size="13" font-family="monospace" fill="#dbdee1">!ai lihat daftar channel</text>
+  <text x="104" y="378" font-size="11" fill="#949ba4">GM/GN Agent • Hari ini 00:01</text>
+
+  <!-- bukti pengiriman (embed hijau) -->
+  <circle cx="44" cy="432" r="20" fill="#1d9e5a"/><text x="44" y="438" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">GN</text>
+  <text x="80" y="426" font-size="15" font-weight="700" fill="#f2f3f5">GM/GN Agent</text>
+  <rect x="188" y="413" width="30" height="16" rx="3" fill="#5865f2"/><text x="203" y="425" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">BOT</text>
+  <text x="226" y="426" font-size="11" fill="#949ba4">Hari ini 19:00</text>
+
+  <rect x="80" y="442" width="600" height="206" rx="6" fill="#2b2d31"/>
+  <rect x="80" y="442" width="5" height="206" rx="2" fill="#57f287"/>
+  <text x="104" y="470" font-size="15" font-weight="700" fill="#f2f3f5">Bukti Pengiriman GM</text>
+  <text x="104" y="496" font-size="14" font-weight="700" fill="#dbdee1">gm buddy</text>
+
+  <g font-size="13" fill="#dbdee1">
+    <circle cx="112" cy="525" r="7" fill="#3ba55d"/><path d="M108.5 525 l2.5 2.5 l4.5 -5" stroke="#fff" stroke-width="1.8" fill="none"/>
+    <text x="126" y="530" font-weight="700" fill="#f2f3f5">Contoh Server</text>
+    <rect x="104" y="540" width="72" height="20" rx="4" fill="#3c4270"/><text x="113" y="555" fill="#c9cdfb">#gm-gn</text>
+    <text x="104" y="578" font-family="monospace" font-size="12" fill="#b5bac1">123456789012345678</text>
+    <text x="104" y="598" font-size="12" fill="#b5bac1">07:00:12</text>
+
+    <circle cx="308" cy="525" r="7" fill="#3ba55d"/><path d="M304.5 525 l2.5 2.5 l4.5 -5" stroke="#fff" stroke-width="1.8" fill="none"/>
+    <text x="322" y="530" font-weight="700" fill="#f2f3f5">Komunitas Fiktif</text>
+    <rect x="300" y="540" width="84" height="20" rx="4" fill="#3c4270"/><text x="309" y="555" fill="#c9cdfb">#morning</text>
+    <text x="300" y="578" font-family="monospace" font-size="12" fill="#b5bac1">234567890123456789</text>
+    <text x="300" y="598" font-size="12" fill="#b5bac1">07:00:31</text>
+
+    <circle cx="504" cy="525" r="7" fill="#3ba55d"/><path d="M500.5 525 l2.5 2.5 l4.5 -5" stroke="#fff" stroke-width="1.8" fill="none"/>
+    <text x="518" y="530" font-weight="700" fill="#f2f3f5">Server Uji</text>
+    <rect x="496" y="540" width="124" height="20" rx="4" fill="#3c4270"/><text x="505" y="555" fill="#c9cdfb">#general-queries</text>
+    <text x="496" y="578" font-family="monospace" font-size="12" fill="#b5bac1">345678901234567890</text>
+    <text x="496" y="598" font-size="12" fill="#b5bac1">07:00:48</text>
+  </g>
+  <text x="104" y="634" font-size="11" fill="#949ba4">3 dari 3 terkirim • GM/GN Agent • Hari ini 07:01</text>
+
+  <text x="878" y="668" text-anchor="end" font-size="11" fill="#80848e">Ilustrasi. Nama server dan ID fiktif. Tampilan asli dapat sedikit berbeda.</text>
+</svg>

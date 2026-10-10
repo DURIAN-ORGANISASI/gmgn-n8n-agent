@@ -1,0 +1,9 @@
+key,value,keterangan
+monitor_channel_id,ISI_ID_CHANNEL_PEMANTAU,Channel tempat kamu kirim perintah '!ai ...' dan menerima bukti.
+admin_user_id,ISI_ID_USER_DISCORD_KAMU,Hanya pesan dari user ID ini yang dianggap perintah.
+monitor_webhook_url,ISI_URL_WEBHOOK_CHANNEL_PEMANTAU,"Opsional, disarankan. URL webhook channel pemantau agar bukti dan balasan tampil sebagai kartu (embed). Kosong = teks polos."
+timezone,Asia/Jakarta,"Zona waktu jadwal (Asia/Jakarta, Asia/Makassar, Asia/Jayapura)."
+gn_time,19:00,Jam GN universal untuk semua channel (HH:mm). GM dikirim saat workflow mulai (cron 07:00).
+min_delay_sec,5,Jeda acak minimum antar channel (detik).
+max_delay_sec,30,Jeda acak maksimum antar channel (detik). Jaga di bawah 60.
+last_message_id,,Diisi otomatis oleh n8n (penanda polling). Biarkan kosong.

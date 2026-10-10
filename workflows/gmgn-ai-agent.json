@@ -1,0 +1,1612 @@
+{
+  "name": "GM/GN AI Agent (perintah via Discord)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "2c97d0d8-ce56-4bcf-b527-04cb42b05159",
+      "name": "Mulai 07:00 (sekali sehari)",
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {},
+      "id": "cf54cde2-7f96-42f1-8c59-1bce3e89304d",
+      "name": "Tes Manual",
+      "position": [
+        0,
+        460
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Config",
+          "mode": "name"
+        }
+      },
+      "id": "7589e054-3321-4430-9214-c9e7c171857d",
+      "name": "Get Config",
+      "position": [
+        240,
+        300
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Messages",
+          "mode": "name"
+        }
+      },
+      "id": "402dcaff-7487-48dc-8b43-9e936fd93a82",
+      "name": "Get Messages",
+      "position": [
+        480,
+        300
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Channels",
+          "mode": "name"
+        }
+      },
+      "id": "9e1c49ac-b516-4ec6-9248-e2f59e1f6587",
+      "name": "Get Channels",
+      "position": [
+        720,
+        300
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = {};\nfor (const i of $('Get Config').all()) cfg[String(i.json.key).trim()] = i.json.value;\nconst tz = cfg.timezone || 'Asia/Jakarta';\nconst nowDt = $now.setZone(tz);\nconst force = $('Tes Manual').isExecuted;   // true jika dijalankan dari trigger 'Tes Manual'\nconst norm = (v) => {\n  if (v === undefined || v === null) return '';\n  const m = String(v).trim().toUpperCase().replace('.', ':').match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*(AM|PM)?$/);\n  if (!m) return '';\n  let h = Number(m[1]);\n  if (m[3] === 'PM' && h < 12) h += 12;\n  if (m[3] === 'AM' && h === 12) h = 0;\n  return String(h).padStart(2, '0') + ':' + m[2];\n};\nconst msgs = $('Get Messages').all().map(i => i.json);\nfunction pick(type) {\n  const pool = msgs.filter(m => String(m.tipe).trim().toLowerCase() === type && String(m.teks || '').trim());\n  if (!pool.length) return null;\n  const w = pool.map(m => Math.max(Number(m.bobot) || 1, 0));\n  const tot = w.reduce((a, b) => a + b, 0);\n  let r = Math.random() * tot;\n  for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i].teks; }\n  return pool[pool.length - 1].teks;\n}\nconst min = Number(cfg.min_delay_sec) || 5;\nconst max = Math.max(Number(cfg.max_delay_sec) || 30, min);\nconst gnDefault = norm(cfg.gn_time) || '19:00';   // jam GN universal (isi key gn_time di Config untuk mengubah)\n// satu pesan GM dan satu pesan GN dipilih sekali, dipakai sama untuk SEMUA channel\nconst textByType = { gm: pick('gm'), gn: pick('gn') };\nconst out = [];\nconst seen = new Set();\nfor (const item of $input.all()) {\n  const c = item.json;\n  const id = String(c.channel_id || '').trim();\n  if (String(c.aktif).trim().toUpperCase() !== 'TRUE') continue;\n  if (!/^\\d{17,20}$/.test(id)) continue;\n  if (seen.has(id)) continue;\n  seen.add(id);\n  for (const type of ['gm', 'gn']) {\n    if (force && type !== 'gm') continue;\n    let ts = nowDt.toMillis();                     // GM: dikirim saat workflow mulai\n    if (type === 'gn') {\n      const [h, m] = gnDefault.split(':').map(Number);\n      ts = nowDt.set({ hour: h, minute: m, second: 0, millisecond: 0 }).toMillis();\n      if (ts < nowDt.toMillis()) continue;         // jam GN hari ini sudah lewat: lewati\n    }\n    const text = textByType[type];\n    out.push({ json: { channel_id: id, tipe: type, teks: text || '', ts,\n      delay: text ? Math.floor(Math.random() * (max - min + 1)) + min : 0 } });\n  }\n}\nout.sort((a, b) => a.json.ts - b.json.ts);   // semua GM dulu, lalu GN\nreturn out;"
+      },
+      "id": "46791c6f-2c7c-4f3b-a94d-896cdad0e5ec",
+      "name": "Susun Pengiriman Hari Ini",
+      "position": [
+        960,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b56a7942-3650-4620-a85c-3c7d9f8897c5",
+      "name": "Loop Over Items",
+      "position": [
+        1200,
+        300
+      ],
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delay }}",
+        "unit": "seconds"
+      },
+      "id": "cb23a6d1-a936-4601-b867-a6560d956ad2",
+      "name": "Wait Acak",
+      "position": [
+        1660,
+        420
+      ],
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "webhookId": "e589a0a3-294e-4b75-aada-ec7f6da18f36"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://discord.com/api/v10/channels/{{ $json.channel_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3964567f-4e3d-4707-91c0-adc6a8251704",
+      "name": "Info Channel",
+      "position": [
+        1880,
+        420
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://discord.com/api/v10/guilds/{{ $json.body.guild_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "417695fa-c910-4bee-b5f0-b124f5fdfcd4",
+      "name": "Info Server",
+      "position": [
+        2100,
+        420
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $('Wait Acak').item.json.channel_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $('Wait Acak').item.json.teks }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d50eab48-a831-4138-ab73-11a75e6c783c",
+      "name": "Kirim ke Discord",
+      "position": [
+        2320,
+        420
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $('Wait Acak').item.json;\nconst ch = ($('Info Channel').item.json.body) || {};\nconst gd = ($('Info Server').item.json.body) || {};\nconst r = $json;\nconst ok = r.statusCode >= 200 && r.statusCode < 300;\nconst body = r.body || {};\nreturn { json: {\n  waktu: $now.toFormat('yyyy-MM-dd HH:mm:ss'),\n  server: gd.name || '(server tidak diketahui)',\n  nama_channel: ch.name ? '#' + ch.name : '(tidak diketahui)',\n  channel_id: src.channel_id, tipe: src.tipe, pesan: src.teks,\n  message_id: ok ? String(body.id || '') : '',\n  status: ok ? 'TERKIRIM' : 'GAGAL',\n  error: ok ? '' : (!src.teks ? ('Sheet Messages tidak punya pesan bertipe ' + src.tipe) : ('HTTP ' + r.statusCode + ': ' + JSON.stringify(body).slice(0, 200)))\n}};",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "116df61e-ed09-4982-ab4b-d1c50db98f4c",
+      "name": "Susun Log",
+      "position": [
+        2540,
+        420
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": []
+        }
+      },
+      "id": "3023970e-2cc3-4ac2-9df7-656b7d16878f",
+      "name": "Simpan Log",
+      "position": [
+        2760,
+        420
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $json.error; return { json: { ...$('Susun Log').item.json, log_error: e ? String(e.message || e).slice(0, 200) : '' } };",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "c579bb67-3d8c-4d6d-b4bc-17c22528d866",
+      "name": "Teruskan Data",
+      "position": [
+        2980,
+        420
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const logs = $input.all().map(i => i.json);\nconst cfg = {};\nfor (const i of $('Get Config').all()) cfg[String(i.json.key).trim()] = i.json.value;\nconst monitor = String(cfg.monitor_channel_id || '').replace(/\\D/g, '');\nconst hook = String(cfg.monitor_webhook_url || '').trim();\nconst okHook = /^https:\\/\\/(?:ptb\\.|canary\\.)?discord(?:app)?\\.com\\/api(?:\\/v\\d+)?\\/webhooks\\/\\d+\\/[\\w-]+$/.test(hook);\nconst url = okHook ? hook : `https://discord.com/api/v10/channels/${monitor}/messages`;\nconst bad = logs.find(l => l.log_error);\nconst warn = bad ? '⚠️ Gagal menyimpan ke sheet Logs (cek header kolom Logs): ' + String(bad.log_error).slice(0, 250) : '';\n\n// ===== Tanpa webhook: teks polos (embed tidak bisa dikirim dengan token akun) =====\nif (!okHook) {\n  const lines = logs.map(l =>\n    `• ${l.status === 'TERKIRIM' ? '✅' : '❌'} ${l.server} › <#${l.channel_id}> • ID: \\`${l.channel_id}\\` • ${String(l.tipe).toUpperCase()} • ${l.waktu} • 💬 ${l.pesan}` +\n    (l.error ? '\\n   ⚠️ ' + l.error : ''));\n  const chunks = [];\n  let cur = '🤖 **Bukti pengiriman**';\n  for (const ln of lines) {\n    const part = ln.slice(0, 1500);\n    if ((cur + '\\n\\n' + part).length > 1800) { chunks.push(cur); cur = '🤖 **Bukti pengiriman (lanjutan)**'; }\n    cur += '\\n\\n' + part;\n  }\n  if (warn) cur += '\\n\\n' + warn;\n  chunks.push(cur);\n  return chunks.map(content => ({ json: { url, body: { content } } }));\n}\n\n// ===== Dengan webhook: embed =====\nconst meta = { gm: { ico: '☀️', label: 'GM' }, gn: { ico: '🌙', label: 'GN' } };\nconst byType = {};\nfor (const l of logs) (byType[String(l.tipe).toLowerCase()] = byType[String(l.tipe).toLowerCase()] || []).push(l);\nconst embeds = [];\nconst now = new Date().toISOString();\nfor (const [tipe, arr] of Object.entries(byType)) {\n  const m = meta[tipe] || { ico: '📨', label: tipe.toUpperCase() };\n  const ok = arr.filter(l => l.status === 'TERKIRIM').length;\n  const color = ok === arr.length ? 5763719 : ok === 0 ? 15548997 : 16705372;\n  const pesan = [...new Set(arr.map(l => String(l.pesan)))].join(' / ');\n  const fields = arr.map(l => ({\n    name: `${l.status === 'TERKIRIM' ? '✅' : '❌'} ${l.server}`.slice(0, 256),\n    value: (`<#${l.channel_id}>\\n\\`${l.channel_id}\\`\\n🕐 ${l.waktu}` + (l.error ? `\\n⚠️ ${l.error}` : '')).slice(0, 1024),\n    inline: true\n  }));\n  const total = Math.ceil(fields.length / 24);\n  for (let i = 0; i < fields.length; i += 24) {\n    embeds.push({\n      title: `${m.ico} Bukti Pengiriman ${m.label}` + (total > 1 ? ` (${i / 24 + 1}/${total})` : ''),\n      description: `💬 **${pesan}**`.slice(0, 2000),\n      color,\n      fields: fields.slice(i, i + 24),\n      footer: { text: `${ok} dari ${arr.length} terkirim • GM/GN Agent` },\n      timestamp: now\n    });\n  }\n}\n// batas Discord: maksimal 10 embed dan sekitar 6000 karakter per pesan\nconst size = (e) => (e.title || '').length + (e.description || '').length + ((e.footer && e.footer.text) || '').length +\n  (e.fields || []).reduce((a, f) => a + f.name.length + f.value.length, 0);\nconst messages = [];\nlet group = [], groupSize = 0;\nfor (const e of embeds) {\n  const s = size(e);\n  if (group.length >= 10 || groupSize + s > 5500) { messages.push(group); group = []; groupSize = 0; }\n  group.push(e); groupSize += s;\n}\nif (group.length) messages.push(group);\nreturn messages.map((g, i) => {\n  const body = { username: 'GM/GN Agent', embeds: g };\n  if (i === 0 && warn) body.content = warn;\n  return { json: { url, body } };\n});"
+      },
+      "id": "bb7dc532-055d-4011-ba79-b7a8ea4b2496",
+      "name": "Rangkum Bukti",
+      "position": [
+        1440,
+        160
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "a01e2b80-073d-4927-81e3-f7c3d7e99405",
+      "name": "Kirim Bukti ke Channel Pemantau",
+      "position": [
+        1680,
+        160
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "1 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "04551e05-f913-4944-be89-1b86439414b3",
+      "name": "Mulai 00:01 (proses perintah)",
+      "position": [
+        0,
+        950
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Config",
+          "mode": "name"
+        }
+      },
+      "id": "09009886-fd4d-4e1e-b6ec-aff2f31475a4",
+      "name": "Get Config1",
+      "position": [
+        220,
+        950
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = {};\nfor (const i of $input.all()) cfg[String(i.json.key).trim()] = i.json.value;\nconst d = (v) => String(v ?? '').replace(/\\D/g, '');\nreturn [{ json: { monitor_channel_id: d(cfg.monitor_channel_id), admin_user_id: d(cfg.admin_user_id), last_message_id: d(cfg.last_message_id), monitor_webhook_url: String(cfg.monitor_webhook_url ?? '').trim() } }];"
+      },
+      "id": "19d46507-b1a6-4861-80c4-371189d60c50",
+      "name": "Siapkan Polling",
+      "position": [
+        440,
+        950
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://discord.com/api/v10/channels/{{ $json.monitor_channel_id }}/messages?limit={{ $json.last_message_id ? 100 : 1 }}{{ $json.last_message_id ? '&after=' + $json.last_message_id : '' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "1cef07c1-2e75-4ee3-ad32-f75ae79376a7",
+      "name": "Ambil Pesan Baru",
+      "position": [
+        660,
+        950
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $input.all().map(i => i.json && i.json.id).filter(Boolean);\nif (!ids.length) return [];\nids.sort((a, b) => a.length - b.length || a.localeCompare(b));\nreturn [{ json: { key: 'last_message_id', value: 'm' + ids[ids.length - 1] } }];"
+      },
+      "id": "7be2daa2-3bd7-4b87-8b4d-1ff6a4feba0f",
+      "name": "Cari ID Terbaru",
+      "position": [
+        900,
+        1170
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Config",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "key": "={{ $json.key }}",
+            "value": "={{ $json.value }}"
+          },
+          "matchingColumns": [
+            "key"
+          ],
+          "schema": [
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "value",
+              "displayName": "value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "e38f6eaa-ab21-4afb-93f5-efe4b3102087",
+      "name": "Simpan Cursor",
+      "position": [
+        1120,
+        1170
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Siapkan Polling').first().json;\nif (!cfg.last_message_id) return [];\nconst cmp = (a, b) => a.length - b.length || a.localeCompare(b);\nconst msgs = $input.all().map(i => i.json).filter(m => m && m.id);\nconst cmds = msgs.filter(m => m.author && String(m.author.id) === cfg.admin_user_id\n    && typeof m.content === 'string' && /^!ai\\s+/i.test(m.content.trim())).sort((a, b) => cmp(a.id, b.id));\nreturn cmds.map(m => ({ json: { id: m.id, text: m.content.trim().replace(/^!ai\\s+/i, '') } }));"
+      },
+      "id": "430faf18-325d-4f54-ace3-a58a138cdc55",
+      "name": "Ambil Perintah",
+      "position": [
+        900,
+        950
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Kamu adalah asisten pengatur bot GM/GN Discord. Waktu sekarang: {{ $now.setZone('Asia/Jakarta').toFormat('yyyy-MM-dd HH:mm') }} (WIB).\nJawab dalam bahasa Indonesia, singkat dan jelas.\nBalasanmu ditampilkan di dalam kartu (embed) Discord. Pakai teks singkat dengan baris per butir; hindari tabel dan heading markdown (# ...).\nPerintah pengguna dikumpulkan dan diproses sekali sehari pukul 00:01 WIB (atau saat dijalankan manual), bukan real-time. Kata 'sekarang' pada perintah berarti saat pemrosesan ini berlangsung.\n\nDATA di Google Sheets:\n- Channels: channel_id, aktif (TRUE/FALSE), gm_time, gn_time (format HH:mm). Tidak ada label dan tidak ada guild_id; nama server dan nama channel selalu diambil langsung dari Discord.\n- Messages: tipe (gm/gn), teks, bobot\n- Logs: waktu, server, nama_channel, channel_id, tipe, pesan, message_id, status, error\nPengiriman terjadwal dilakukan otomatis oleh workflow lain berdasarkan sheet Channels. Tugasmu hanya mengubah/membaca data dan mengirim manual jika diminta.\n\nCARA MENAMPILKAN CHANNEL (wajib dipakai setiap kali menyebut channel):\nUntuk tiap channel_id, panggil info_channel (dapat nama channel dan guild_id), lalu info_server dengan guild_id itu (dapat nama server). Tampilkan persis seperti ini, satu baris per channel:\n• NAMA SERVER › <#CHANNEL_ID> • ID: CHANNEL_ID • GM HH:mm • GN HH:mm • Aktif/Nonaktif\nContoh: • QMS Network Official › <#123456789012345678> • ID: 123456789012345678 • GM 07:00 • GN 21:00 • Aktif\nFormat <#CHANNEL_ID> membuat nama channel bisa diklik di Discord; jangan menulis nama channel lagi di sebelahnya (tanpa tanda kurung atau `#nama-channel`), cukup satu kali. Jika info_channel gagal (error/tidak ditemukan), tulis: • (channel tidak ditemukan) • ID: CHANNEL_ID. Jangan mengarang nama server atau channel.\n\nFORMAT BUKTI PENGIRIMAN (untuk kirim manual dan tampilan log), satu baris per entri, teks pesan di akhir baris, TANPA link:\n• ✅/❌ NAMA SERVER › <#CHANNEL_ID> • ID: CHANNEL_ID • TIPE • WAKTU • 💬 teks pesan\n   ⚠️ error (hanya jika ada, di baris berikutnya)\n\nATURAN:\n1. channel_id harus angka 17-20 digit. Jangan pernah mengarang ID. Jika ID tidak ada atau tidak valid, minta ke pengguna.\n2. Format jam selalu HH:mm (contoh '07:00'). Ubah '7.00' atau '7' menjadi '07:00'.\n3. Sebelum menambah channel baru, panggil info_channel untuk memastikan channel itu ada. Jika gagal, jangan disimpan dan laporkan.\n4. Sebelum mengubah channel, panggil lihat_channel dulu. Saat memakai ubah_channel, isi kolom yang tidak diubah dengan nilai lama agar tidak terhapus.\n5. Menambah channel baru: tambah_channel (aktif TRUE kecuali diminta lain). Jam default jika pengguna tidak menyebutkan: gm_time 07:00 dan gn_time 19:00 (jika hanya salah satu disebut, yang lain tetap memakai default). Jika channel_id sudah ada di sheet (aktif TRUE maupun FALSE), JANGAN tambah baris baru: jika aktif FALSE dan pengguna ingin mengaktifkannya lagi, gunakan ubah_channel dengan aktif TRUE; jika sudah aktif, lewati. Jika lihat_channel menampilkan channel_id yang sama pada lebih dari satu baris, beri tahu pengguna bahwa ada baris ganda yang perlu dihapus manual di sheet (jangan menghapus baris sendiri).\n5a. Tambah banyak channel sekaligus: jika pesan berisi lebih dari satu ID (dipisah spasi, koma, baris baru, atau berupa <#ID> / link discord.com/channels/GUILD/CHANNEL), ambil semua ID 17-20 digit yang unik (untuk link, ambil angka paling belakang sebagai channel_id). Panggil lihat_channel SEKALI di awal untuk cek duplikat. Lalu untuk tiap ID: info_channel (validasi) → jika valid dan belum ada, tambah_channel; jika sudah ada, lewati (jangan ubah); jika gagal, lewati dan catat. Jam bisa diatur per channel: jam yang ditulis di samping/sesudah sebuah ID hanya berlaku untuk ID itu; jam yang ditulis tanpa ID tertentu berlaku untuk semua ID; yang tidak disebut memakai default 07:00 dan 19:00. Panggil info_server sekali per guild_id yang unik, bukan per channel. Panggil tambah_channel SATU PER SATU: tunggu hasilnya selesai sebelum memanggil untuk ID berikutnya, jangan paralel (pemanggilan bersamaan membuat baris saling menimpa di sheet). Setelah semua selesai, panggil lihat_channel sekali lagi untuk memastikan tiap ID benar-benar ada di sheet; laporkan 'Ditambahkan' hanya untuk ID yang terbukti ada di hasil pembacaan itu, dan sebut jelas bila ada yang tidak muncul. Tampilkan hasil dengan format channel di atas, dikelompokkan: \"Ditambahkan\", \"Sudah ada (dilewati)\", \"Gagal\". Akhiri dengan ringkasan jumlah masing-masing.\n6. Menghapus/menghentikan channel: jangan hapus baris, set aktif = FALSE lewat ubah_channel.\n7. Pesan custom: tambah_pesan dengan tipe gm atau gn dan bobot (default 10).\n8. Kirim manual (kirim_sekarang): hanya jika pengguna jelas meminta kirim sekarang. Setelah berhasil, WAJIB panggil tambah_log (isi server, nama_channel dengan format '#nama', channel_id, tipe 'manual', pesan, message_id, status), lalu laporkan bukti memakai FORMAT BUKTI PENGIRIMAN di atas (tanpa link). Jika gagal, laporkan error apa adanya.\n9. Permintaan 'bukti' / 'channel id' / 'daftar': baca sheet (lihat_channel atau lihat_log) lalu tampilkan memakai format channel di atas (daftar channel) atau FORMAT BUKTI PENGIRIMAN (log). Untuk log tampilkan maksimal 5 entri terbaru kecuali diminta lebih.\n10. Jangan mengklaim sudah melakukan sesuatu jika tool belum dipanggil atau tool mengembalikan error.\n11. Akhiri dengan ringkasan singkat perubahan yang terjadi.",
+          "maxIterations": 60
+        }
+      },
+      "id": "08ba9909-06fe-4ac2-ab00-400c07747d82",
+      "name": "AI Agent GM/GN",
+      "position": [
+        1140,
+        950
+      ],
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "9b75e36e-8bbb-4b4b-babc-8d835ab237db",
+      "name": "Google Gemini Chat Model",
+      "position": [
+        1060,
+        1210
+      ],
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Channels",
+          "mode": "name"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Membaca semua baris sheet Channels (channel_id, aktif, gm_time, gn_time)."
+      },
+      "id": "64fbe52f-37aa-42ac-9eaa-92ebd293d8dd",
+      "name": "lihat_channel",
+      "position": [
+        1200,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Channels",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel_id": "={{ $fromAI('channel_id', 'ID channel Discord, angka 17-20 digit', 'string') }}",
+            "aktif": "={{ $fromAI('aktif', 'TRUE atau FALSE', 'string') }}",
+            "gm_time": "={{ $fromAI('gm_time', 'jam kirim GM format HH:mm', 'string') }}",
+            "gn_time": "={{ $fromAI('gn_time', 'jam kirim GN format HH:mm', 'string') }}"
+          },
+          "matchingColumns": [
+            "channel_id"
+          ],
+          "schema": [
+            {
+              "id": "channel_id",
+              "displayName": "channel_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "aktif",
+              "displayName": "aktif",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gm_time",
+              "displayName": "gm_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gn_time",
+              "displayName": "gn_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Menambah channel baru ke sheet Channels (channel_id, aktif, gm_time, gn_time). Jika channel_id sudah ada, barisnya diperbarui (tidak dibuat baris ganda).",
+        "options": {
+          "useAppend": true
+        }
+      },
+      "id": "cd2463af-253b-49ce-ad75-fddbbe0f52f3",
+      "name": "tambah_channel",
+      "position": [
+        1340,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Channels",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel_id": "={{ $fromAI('channel_id', 'ID channel Discord, angka 17-20 digit', 'string') }}",
+            "aktif": "={{ $fromAI('aktif', 'TRUE atau FALSE', 'string') }}",
+            "gm_time": "={{ $fromAI('gm_time', 'jam kirim GM format HH:mm', 'string') }}",
+            "gn_time": "={{ $fromAI('gn_time', 'jam kirim GN format HH:mm', 'string') }}"
+          },
+          "matchingColumns": [
+            "channel_id"
+          ],
+          "schema": [
+            {
+              "id": "channel_id",
+              "displayName": "channel_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "aktif",
+              "displayName": "aktif",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gm_time",
+              "displayName": "gm_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gn_time",
+              "displayName": "gn_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Mengubah baris channel (dicocokkan lewat channel_id). Untuk menghentikan channel set aktif=FALSE. Isi semua kolom dengan nilai lama bila tidak diubah."
+      },
+      "id": "5a220456-ff0a-4e69-a9cf-e6c72f51f1a0",
+      "name": "ubah_channel",
+      "position": [
+        1480,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Messages",
+          "mode": "name"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Membaca daftar pesan GM/GN (tipe, teks, bobot)."
+      },
+      "id": "74433a52-b40d-411c-89af-b396955880c6",
+      "name": "lihat_pesan",
+      "position": [
+        1620,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Messages",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipe": "={{ $fromAI('tipe', 'gm atau gn', 'string') }}",
+            "teks": "={{ $fromAI('teks', 'teks pesan', 'string') }}",
+            "bobot": "={{ $fromAI('bobot', 'angka bobot, default 10', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipe",
+              "displayName": "tipe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "teks",
+              "displayName": "teks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bobot",
+              "displayName": "bobot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Menambah pesan custom baru (tipe gm/gn, teks, bobot)."
+      },
+      "id": "048046ea-2934-4942-a06f-2c55725f760f",
+      "name": "tambah_pesan",
+      "position": [
+        1760,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "name"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Membaca riwayat pengiriman dari sheet Logs. Entri terbaru ada di baris paling bawah."
+      },
+      "id": "9ff6759d-736e-4c5e-8748-295e6309d179",
+      "name": "lihat_log",
+      "position": [
+        1900,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Logs",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "waktu": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "server": "={{ $fromAI('server', 'nama server Discord', 'string') }}",
+            "nama_channel": "={{ $fromAI('nama_channel', 'nama channel dengan awalan #', 'string') }}",
+            "channel_id": "={{ $fromAI('channel_id', 'ID channel tujuan', 'string') }}",
+            "tipe": "={{ $fromAI('tipe', 'gm, gn, atau manual', 'string') }}",
+            "pesan": "={{ $fromAI('pesan', 'teks yang dikirim', 'string') }}",
+            "message_id": "={{ $fromAI('message_id', 'ID pesan dari respons Discord', 'string') }}",
+            "status": "={{ $fromAI('status', 'TERKIRIM atau GAGAL', 'string') }}",
+            "error": "={{ $fromAI('error', 'pesan error, kosongkan jika sukses', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "waktu",
+              "displayName": "waktu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "server",
+              "displayName": "server",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nama_channel",
+              "displayName": "nama_channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channel_id",
+              "displayName": "channel_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipe",
+              "displayName": "tipe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pesan",
+              "displayName": "pesan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Mencatat bukti pengiriman manual ke sheet Logs setelah kirim_sekarang."
+      },
+      "id": "80b14f1c-558c-45d0-aa4d-fedc7aae5073",
+      "name": "tambah_log",
+      "position": [
+        2040,
+        1270
+      ],
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google Service Account (GM/GN)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://discord.com/api/v10/channels/{{ $fromAI('channel_id', 'ID channel Discord, angka 17-20 digit', 'string') }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "toolDescription": "Mengambil info channel dari Discord: name (nama channel) dan guild_id (ID server). Error 404/403 berarti channel tidak ditemukan atau tidak ada akses."
+      },
+      "id": "ce4deddf-4a95-4d48-b904-4f4618912ad8",
+      "name": "info_channel",
+      "position": [
+        2180,
+        1270
+      ],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://discord.com/api/v10/guilds/{{ $fromAI('guild_id', 'ID server Discord (guild_id dari info_channel)', 'string') }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "toolDescription": "Mengambil info server dari Discord: name (nama server). Butuh guild_id dari info_channel."
+      },
+      "id": "60f77eae-2cc6-4f81-b5ce-b55907186b4e",
+      "name": "info_server",
+      "position": [
+        2320,
+        1270
+      ],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $fromAI('channel_id', 'ID channel tujuan, angka 17-20 digit', 'string') }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $fromAI('content', 'teks pesan yang dikirim', 'string') }) }}",
+        "options": {},
+        "toolDescription": "Mengirim pesan ke channel Discord SEKARANG. Mengembalikan respons Discord (id = message_id). Hanya pakai jika diminta kirim sekarang."
+      },
+      "id": "a472be3d-813a-4ac6-ab0a-c4990bb8a4b1",
+      "name": "kirim_sekarang",
+      "position": [
+        2460,
+        1270
+      ],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "4422391b-6e09-4f39-b8eb-227a2beb3a44",
+      "name": "Balas ke Channel Pemantau",
+      "position": [
+        1480,
+        950
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Discord User Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ Math.max(0, Math.round(($json.ts - $now.toMillis()) / 1000)) }}",
+        "unit": "seconds"
+      },
+      "id": "48089eb7-081d-45f7-a7cc-c9e884989072",
+      "name": "Tunggu Jam Kirim",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        420
+      ],
+      "webhookId": "7ff45ff3-4007-435e-8cf6-1c960ad71df2"
+    },
+    {
+      "parameters": {},
+      "id": "4e06e8c7-707b-478d-889f-551e7de3af0d",
+      "name": "Tes Manual Perintah",
+      "position": [
+        0,
+        1110
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Siapkan Polling').first().json;\nconst hook = String(cfg.monitor_webhook_url || '').trim();\nconst okHook = /^https:\\/\\/(?:ptb\\.|canary\\.)?discord(?:app)?\\.com\\/api(?:\\/v\\d+)?\\/webhooks\\/\\d+\\/[\\w-]+$/.test(hook);\nconst url = okHook ? hook : `https://discord.com/api/v10/channels/${cfg.monitor_channel_id}/messages`;\nconst cmds = $('Ambil Perintah').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const j = item.json;\n  const idx = (item.pairedItem && typeof item.pairedItem.item === 'number') ? item.pairedItem.item : i;\n  const cmd = (cmds[idx] && cmds[idx].json) || {};\n  const gagal = !(typeof j.output === 'string' && j.output);\n  const text = gagal\n    ? 'Perintah gagal diproses: ' + String((j.error && j.error.message) || j.error || 'tidak diketahui').slice(0, 500)\n    : j.output;\n  // pecah teks panjang per baris agar tiap bagian muat dalam satu embed\n  const parts = [];\n  let cur = '';\n  for (const line of String(text).split('\\n')) {\n    const ln = line.slice(0, 1000);\n    if ((cur + '\\n' + ln).length > 3800) { parts.push(cur); cur = ''; }\n    cur += (cur ? '\\n' : '') + ln;\n  }\n  parts.push(cur);\n  parts.forEach((p, k) => {\n    if (okHook) {\n      const embed = {\n        title: gagal ? '⚠️ Perintah gagal diproses' : '🤖 Hasil perintah' + (parts.length > 1 ? ` (${k + 1}/${parts.length})` : ''),\n        description: p,\n        color: gagal ? 15548997 : 5793266,\n        timestamp: new Date().toISOString(),\n        footer: { text: 'GM/GN Agent' }\n      };\n      if (k === 0 && cmd.text) embed.fields = [{ name: 'Perintah', value: ('`!ai ' + cmd.text + '`').slice(0, 1024) }];\n      out.push({ json: { url, body: { username: 'GM/GN Agent', embeds: [embed] } } });\n    } else {\n      const body = { content: ('🤖 ' + p).slice(0, 1900) };\n      if (cmd.id) body.message_reference = { message_id: cmd.id };\n      out.push({ json: { url, body } });\n    }\n  });\n});\nreturn out;"
+      },
+      "id": "e232feac-a3fa-4cb0-a9b1-5b4cf2d045ed",
+      "name": "Susun Balasan",
+      "position": [
+        1310,
+        950
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "Get Config": {
+      "main": [
+        [
+          {
+            "node": "Get Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages": {
+      "main": [
+        [
+          {
+            "node": "Get Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Channels": {
+      "main": [
+        [
+          {
+            "node": "Susun Pengiriman Hari Ini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Rangkum Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tunggu Jam Kirim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Acak": {
+      "main": [
+        [
+          {
+            "node": "Info Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info Channel": {
+      "main": [
+        [
+          {
+            "node": "Info Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info Server": {
+      "main": [
+        [
+          {
+            "node": "Kirim ke Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim ke Discord": {
+      "main": [
+        [
+          {
+            "node": "Susun Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Log": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Log": {
+      "main": [
+        [
+          {
+            "node": "Teruskan Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teruskan Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tes Manual": {
+      "main": [
+        [
+          {
+            "node": "Get Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rangkum Bukti": {
+      "main": [
+        [
+          {
+            "node": "Kirim Bukti ke Channel Pemantau",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Config1": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Polling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Polling": {
+      "main": [
+        [
+          {
+            "node": "Ambil Pesan Baru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Pesan Baru": {
+      "main": [
+        [
+          {
+            "node": "Ambil Perintah",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cari ID Terbaru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cari ID Terbaru": {
+      "main": [
+        [
+          {
+            "node": "Simpan Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ambil Perintah": {
+      "main": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent GM/GN": {
+      "main": [
+        [
+          {
+            "node": "Susun Balasan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lihat_channel": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tambah_channel": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ubah_channel": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lihat_pesan": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tambah_pesan": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lihat_log": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tambah_log": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "info_channel": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "info_server": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kirim_sekarang": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent GM/GN",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mulai 07:00 (sekali sehari)": {
+      "main": [
+        [
+          {
+            "node": "Get Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Pengiriman Hari Ini": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tunggu Jam Kirim": {
+      "main": [
+        [
+          {
+            "node": "Wait Acak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mulai 00:01 (proses perintah)": {
+      "main": [
+        [
+          {
+            "node": "Get Config1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tes Manual Perintah": {
+      "main": [
+        [
+          {
+            "node": "Get Config1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Balasan": {
+      "main": [
+        [
+          {
+            "node": "Balas ke Channel Pemantau",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Jakarta"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
