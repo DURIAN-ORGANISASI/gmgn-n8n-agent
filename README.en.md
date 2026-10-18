@@ -13,10 +13,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2DAD87?style=flat" alt="MIT License"></a>
 </p>
 
+<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
+
 <p><strong>Automate Good Morning and Good Night messages across Discord channels.</strong><br>
 Deterministic scheduling in n8n, configuration in Google Sheets, and chat-based administration.</p>
-
-<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
 
 <p>
   <a href="#-features">Features</a> ·
