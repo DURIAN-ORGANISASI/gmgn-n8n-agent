@@ -1,7 +1,7 @@
 # 09 · Arsitektur
 
 <div align="center">
-<img src="../assets/architecture.svg" alt="Arsitektur" width="900"/>
+<img src="../assets/architecture-map.id.svg" alt="Arsitektur" width="900"/>
 </div>
 
 Satu workflow, dua alur, satu sumber data (Google Sheets). Tidak ada state tersembunyi di n8n, kecuali penanda pembacaan pesan yang juga disimpan di sheet `Config`. Kedua alur berjalan sekali sehari: perintah pukul 00:01, pengiriman GM pukul 07:00 dan GN pukul 19:00.
