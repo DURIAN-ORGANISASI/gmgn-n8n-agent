@@ -269,6 +269,8 @@ Commands are interpreted in natural Indonesian. Full list: [`docs/06-perintah.md
 
 ## 📊 Data (Google Sheets)
 
+![Google Sheets schema](assets/sheets-schema.en.svg)
+
 | Sheet | Columns | Purpose |
 |---|---|---|
 | `Config` | `key`, `value`, `keterangan` | `monitor_channel_id`, `admin_user_id`, `monitor_webhook_url` (optional), `timezone`, `gn_time`, `min_delay_sec`, `max_delay_sec`, `last_message_id` |
