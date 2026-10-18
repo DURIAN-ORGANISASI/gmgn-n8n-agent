@@ -13,10 +13,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2DAD87?style=flat" alt="MIT License"></a>
 </p>
 
+<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
+
 <p><strong>Automatiskan pesan Good Morning dan Good Night ke banyak channel Discord.</strong><br>
 Jadwal deterministik di n8n, konfigurasi di Google Sheets, dan perintah administrasi melalui chat.</p>
-
-<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
 
 <p>
   <a href="#-fitur">Fitur</a> ·
@@ -30,6 +30,7 @@ Jadwal deterministik di n8n, konfigurasi di Google Sheets, dan perintah administ
 </p>
 
 </div>
+
 ---
 
 > [!WARNING]
