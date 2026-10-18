@@ -1,25 +1,35 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="GM/GN AI Agent for n8n" width="100%"/>
+<img src="assets/brand.svg" alt="GM/GN n8n Agent" width="84" height="84">
 
-<br/>
+# GM/GN AI Agent for n8n
 
-[🇮🇩 Bahasa Indonesia](README.md) · **🇬🇧 English**
+<p>
+  <img src="https://img.shields.io/badge/n8n-self--hosted-FF6D5A?style=flat&logo=n8n&logoColor=white" alt="n8n self-hosted">
+  <img src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat&logo=railway&logoColor=white" alt="Railway">
+  <img src="https://img.shields.io/badge/Data-Google%20Sheets-188038?style=flat&logo=googlesheets&logoColor=white" alt="Google Sheets">
+  <img src="https://img.shields.io/badge/Discord-REST%20API-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord REST API">
+  <img src="https://img.shields.io/badge/AI-Gemini%20%7C%20Groq-6688FF?style=flat" alt="Gemini or Groq">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2DAD87?style=flat" alt="MIT License"></a>
+</p>
 
-![n8n](https://img.shields.io/badge/n8n-self--hosted-ff6d5a?logo=n8n&logoColor=white)
-![Railway](https://img.shields.io/badge/deploy-Railway-0b0d0e?logo=railway&logoColor=white)
-![Google Sheets](https://img.shields.io/badge/data-Google%20Sheets-1d9e5a?logo=googlesheets&logoColor=white)
-![Discord](https://img.shields.io/badge/Discord-REST%20API-5865f2?logo=discord&logoColor=white)
-![AI](https://img.shields.io/badge/AI-Gemini%20%7C%20Groq-3b82f6)
-![License](https://img.shields.io/badge/license-MIT-green)
+<p><strong>Automate Good Morning and Good Night messages across Discord channels.</strong><br>
+Deterministic scheduling in n8n, configuration in Google Sheets, and chat-based administration.</p>
 
-**Post GM &amp; GN to many Discord channels automatically, and manage everything by chatting.**
-Channels, times, and messages live in Google Sheets. Delivery proof comes back to the channel where you gave the command.
+<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
 
-[Features](#-features) · [How it works](#-how-it-works) · [Quick start](#-quick-start) · [Railway](#-install-on-railway) · [Credentials](#-credentials-setup) · [Commands](#-commands) · [Security](#-security-and-disclaimer) · [Privacy](#-privacy-and-data) · [FAQ](#-faq)
+<p>
+  <a href="#-features">Features</a> ·
+  <a href="#-how-it-works">Architecture</a> ·
+  <a href="#-quick-start">Quick start</a> ·
+  <a href="#-install-on-railway">Deploy on Railway</a> ·
+  <a href="#-credentials-setup">Credentials</a> ·
+  <a href="#-commands">Commands</a> ·
+  <a href="#-security-and-disclaimer">Security</a> ·
+  <a href="#-faq">FAQ</a>
+</p>
 
 </div>
-
 ---
 
 > [!WARNING]
@@ -27,6 +37,8 @@ Channels, times, and messages live in Google Sheets. Delivery proof comes back t
 
 > [!NOTE]
 > The step-by-step guides in [`docs/`](docs) are written in Indonesian. The workflow, node names, and sheet schema are language-neutral, and the scripts are documented in English where needed.
+
+![GM/GN AI Agent workflow illustration](assets/hero.en.svg)
 
 ## ✨ Features
 
@@ -46,14 +58,14 @@ Channels, times, and messages live in Google Sheets. Delivery proof comes back t
 ## 📸 Preview
 
 <div align="center">
-<img src="assets/discord-preview.svg" alt="Illustration of the Discord output" width="760"/>
+<img src="assets/discord-preview.en.svg" alt="Illustration of the Discord output" width="760"/>
 <br/><sub>Illustration of the embed cards with fictional server names and IDs. The real rendering may differ slightly.</sub>
 </div>
 
 ## 🧠 How it works
 
 <div align="center">
-<img src="assets/architecture.svg" alt="System architecture" width="900"/>
+<img src="assets/architecture-map.en.svg" alt="System architecture" width="900"/>
 </div>
 
 One n8n workflow contains two independent flows:
@@ -65,7 +77,9 @@ One n8n workflow contains two independent flows:
 | *Tes Manual* | Manual | No | Forces a "gm" to every active channel right now, for testing |
 | *Tes Manual Perintah* | Manual | Yes | Processes existing `!ai` commands right now, without waiting for 00:01 |
 
-The model is called only for queued `!ai` commands; reading messages uses no AI, so free-tier quotas are normally enough. Technical details: [`docs/09-arsitektur.md`](docs/09-arsitektur.md).
+The model is called only for queued `!ai` commands; reading messages uses no AI, so free-tier quotas are normally enough. ![Daily scheduler flow](assets/scheduler-flow.en.svg)
+
+Technical details: [`docs/09-arsitektur.md`](docs/09-arsitektur.md) (Indonesian).
 
 ## 🚀 Quick start
 
@@ -159,7 +173,7 @@ More: [`docs/01-railway-n8n.md`](docs/01-railway-n8n.md) (Indonesian).
 The workflow uses four credential types:
 
 <div align="center">
-<img src="assets/credentials-map.svg" alt="Credential to node map" width="860"/>
+<img src="assets/credentials-map.en.svg" alt="Credential to node map" width="860"/>
 </div>
 
 Creating a credential in n8n (same for all): left menu **Overview** (or **Credentials**) → **Create** → **Create Credential** → search the type → fill fields → **Save**. Use the exact names below so they are easy to pick in nodes.
@@ -255,6 +269,8 @@ Commands are interpreted in natural Indonesian. Full list: [`docs/06-perintah.md
 
 ## 📊 Data (Google Sheets)
 
+![Google Sheets schema](assets/sheets-schema.en.svg)
+
 | Sheet | Columns | Purpose |
 |---|---|---|
 | `Config` | `key`, `value`, `keterangan` | `monitor_channel_id`, `admin_user_id`, `monitor_webhook_url` (optional), `timezone`, `gn_time`, `min_delay_sec`, `max_delay_sec`, `last_message_id` |
@@ -266,6 +282,8 @@ Commands are interpreted in natural Indonesian. Full list: [`docs/06-perintah.md
 > ID and time columns **must be Plain Text**, or 18-19 digit Discord IDs will be rounded. After importing the template, use **File > Save as Google Sheets**; n8n cannot read files that are still in Excel format.
 
 ## 🔒 Security and disclaimer
+
+![Security boundaries and data flow](assets/security-boundaries.en.svg)
 
 - **Never** put tokens, API keys, or private keys in the repo, a sheet, or a chat. Secrets live only in n8n *Credentials*.
 - Only messages from `admin_user_id` starting with `!ai` are processed; system replies start with 🤖 so they are never re-read as commands. The agent has no delete tool.

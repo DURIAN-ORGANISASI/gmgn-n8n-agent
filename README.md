@@ -1,29 +1,41 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="GM/GN AI Agent untuk n8n" width="100%"/>
+<img src="assets/brand.svg" alt="GM/GN n8n Agent" width="84" height="84">
 
-<br/>
+# GM/GN AI Agent for n8n
 
-**🇮🇩 Bahasa Indonesia** · [🇬🇧 English](README.en.md)
+<p>
+  <img src="https://img.shields.io/badge/n8n-self--hosted-FF6D5A?style=flat&logo=n8n&logoColor=white" alt="n8n self-hosted">
+  <img src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat&logo=railway&logoColor=white" alt="Railway">
+  <img src="https://img.shields.io/badge/Data-Google%20Sheets-188038?style=flat&logo=googlesheets&logoColor=white" alt="Google Sheets">
+  <img src="https://img.shields.io/badge/Discord-REST%20API-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord REST API">
+  <img src="https://img.shields.io/badge/AI-Gemini%20%7C%20Groq-6688FF?style=flat" alt="Gemini or Groq">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2DAD87?style=flat" alt="MIT License"></a>
+</p>
 
-![n8n](https://img.shields.io/badge/n8n-self--hosted-ff6d5a?logo=n8n&logoColor=white)
-![Railway](https://img.shields.io/badge/deploy-Railway-0b0d0e?logo=railway&logoColor=white)
-![Google Sheets](https://img.shields.io/badge/data-Google%20Sheets-1d9e5a?logo=googlesheets&logoColor=white)
-![Discord](https://img.shields.io/badge/Discord-REST%20API-5865f2?logo=discord&logoColor=white)
-![AI](https://img.shields.io/badge/AI-Gemini%20%7C%20Groq-3b82f6)
-![License](https://img.shields.io/badge/license-MIT-green)
+<p><strong>Automatiskan pesan Good Morning dan Good Night ke banyak channel Discord.</strong><br>
+Jadwal deterministik di n8n, konfigurasi di Google Sheets, dan perintah administrasi melalui chat.</p>
 
-**Kirim GM &amp; GN ke banyak channel Discord secara otomatis, dan atur semuanya lewat chat.**
-Channel, jam, dan pesan tersimpan di Google Sheets. Bukti kirim kembali ke channel tempat kamu memberi perintah.
+<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
 
-[Fitur](#-fitur) · [Cara kerja](#-cara-kerja) · [Mulai cepat](#-mulai-cepat) · [Railway](#-instalasi-di-railway) · [Credential](#-setup-credential) · [Perintah](#-perintah) · [Struktur repo](#-struktur-repo) · [Keamanan](#-keamanan-dan-disclaimer) · [Privasi](#-privasi-dan-data) · [FAQ](#-faq)
+<p>
+  <a href="#-fitur">Fitur</a> ·
+  <a href="#-cara-kerja">Arsitektur</a> ·
+  <a href="#-mulai-cepat">Mulai cepat</a> ·
+  <a href="#-instalasi-di-railway">Deploy Railway</a> ·
+  <a href="#-setup-credential">Credential</a> ·
+  <a href="#-perintah">Perintah</a> ·
+  <a href="#-keamanan-dan-disclaimer">Keamanan</a> ·
+  <a href="#-faq">FAQ</a>
+</p>
 
 </div>
-
 ---
 
 > [!WARNING]
 > **Baca dulu: risiko Terms of Service Discord.** Versi awal proyek ini ([`gmgn-bot`](https://github.com/akndrn000/gmgn-bot)) memakai *token akun pengguna* (self-bot). Itu melanggar ToS Discord dan akun bisa diblokir. Workflow di repo ini memakai Discord REST API dengan credential **Header Auth** yang kamu isi sendiri. Kamu bebas mengisinya dengan `Bot <token>` untuk bot resmi (sangat disarankan jika bot bisa diundang ke channel target). Pakai token akun pribadi sepenuhnya risiko kamu sendiri. Detail di [Keamanan dan disclaimer](#-keamanan-dan-disclaimer).
+
+![Ilustrasi alur GM/GN AI Agent](assets/hero.id.svg)
 
 ## ✨ Fitur
 
@@ -43,14 +55,14 @@ Channel, jam, dan pesan tersimpan di Google Sheets. Bukti kirim kembali ke chann
 ## 📸 Tampilan
 
 <div align="center">
-<img src="assets/discord-preview.svg" alt="Ilustrasi tampilan di Discord" width="760"/>
+<img src="assets/discord-preview.id.svg" alt="Ilustrasi tampilan di Discord" width="760"/>
 <br/><sub>Ilustrasi kartu embed dengan nama server dan ID fiktif. Tampilan asli dapat sedikit berbeda.</sub>
 </div>
 
 ## 🧠 Cara kerja
 
 <div align="center">
-<img src="assets/architecture.svg" alt="Arsitektur sistem" width="900"/>
+<img src="assets/architecture-map.id.svg" alt="Arsitektur sistem" width="900"/>
 </div>
 
 Satu workflow n8n berisi dua alur yang saling bebas:
@@ -63,6 +75,8 @@ Satu workflow n8n berisi dua alur yang saling bebas:
 | *Tes Manual Perintah* | Manual | Ya | Memproses perintah `!ai` yang sudah ada sekarang juga, tanpa menunggu 00:01 |
 
 Alur 2 memanggil model AI hanya untuk perintah `!ai` yang menumpuk. Membaca pesan tidak memakai AI, jadi kuota gratis model cukup untuk pemakaian normal.
+
+![Diagram scheduler harian](assets/scheduler-flow.id.svg)
 
 Detail teknis tiap node ada di [`docs/09-arsitektur.md`](docs/09-arsitektur.md).
 
@@ -164,7 +178,7 @@ Detail dan variabel lain: [`docs/01-railway-n8n.md`](docs/01-railway-n8n.md).
 Workflow memakai empat jenis credential. Peta lengkapnya:
 
 <div align="center">
-<img src="assets/credentials-map.svg" alt="Peta credential ke node" width="860"/>
+<img src="assets/credentials-map.id.svg" alt="Peta credential ke node" width="860"/>
 </div>
 
 Cara membuat credential di n8n (berlaku untuk semuanya): menu kiri **Overview** (atau **Credentials**) → tombol **Create** → **Create Credential** → cari jenisnya → isi field → **Save**. Beri nama persis seperti di bawah supaya mudah dikenali saat memilihnya di node.
@@ -264,6 +278,8 @@ Daftar lengkap beserta perilaku yang diharapkan: [`docs/06-perintah.md`](docs/06
 
 ## 📊 Struktur data (Google Sheets)
 
+![Skema Google Sheets](assets/sheets-schema.id.svg)
+
 | Sheet | Kolom | Fungsi |
 |---|---|---|
 | `Config` | `key`, `value`, `keterangan` | `monitor_channel_id`, `admin_user_id`, `monitor_webhook_url` (opsional), `timezone`, `gn_time`, `min_delay_sec`, `max_delay_sec`, `last_message_id` |
@@ -281,7 +297,7 @@ Template siap pakai: [`sheets/gmgn-sheet-template.xlsx`](sheets/gmgn-sheet-templ
 ```text
 gmgn-n8n-agent/
 ├── README.md
-├── assets/                    # banner dan diagram (SVG)
+├── assets/                    # logo dan diagram SVG bilingual
 ├── workflows/
 │   └── gmgn-ai-agent.json     # workflow n8n (placeholder GANTI_SHEET_ID)
 ├── sheets/
@@ -310,6 +326,8 @@ gmgn-n8n-agent/
 | Ubah jam GN | Ubah `gn_time` di sheet `Config` |
 
 ## 🔒 Keamanan dan disclaimer
+
+![Batas keamanan dan aliran data](assets/security-boundaries.id.svg)
 
 - **Jangan pernah** menaruh token, API key, atau private key di repo, sheet, maupun chat. Semua rahasia hanya di *Credentials* n8n (terenkripsi dengan `N8N_ENCRYPTION_KEY`).
 - Hanya pesan dari `admin_user_id` yang berawalan `!ai` yang diproses. Balasan sistem berawalan 🤖 agar tidak terbaca ulang sebagai perintah.

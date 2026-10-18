@@ -3,7 +3,7 @@
 Workflow memakai empat jenis credential. Peta lengkapnya:
 
 <div align="center">
-<img src="../assets/credentials-map.svg" alt="Peta credential ke node" width="860"/>
+<img src="../assets/credentials-map.id.svg" alt="Peta credential ke node" width="860"/>
 </div>
 
 Cara membuat credential di n8n (berlaku untuk semuanya): menu kiri **Overview** (atau **Credentials**) → tombol **Create** → **Create Credential** → cari jenisnya → isi field → **Save**. Beri nama persis seperti di bawah supaya mudah dikenali saat memilihnya di node.
